@@ -1,0 +1,465 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecommerce-microservices
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin
+  namespace: ecommerce-microservices
+  labels:
+    app: zipkin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zipkin
+  template:
+    metadata:
+      labels:
+        app: zipkin
+    spec:
+      containers:
+      - name: zipkin
+        image: openzipkin/zipkin:latest
+        ports:
+        - containerPort: 9411
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin-service
+  namespace: ecommerce-microservices
+  labels:
+    app: zipkin
+spec:
+  selector:
+    app: zipkin
+  ports:
+  - port: 9411
+    targetPort: 9411
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-discovery
+  namespace: ecommerce-microservices
+  labels:
+    app: service-discovery
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-discovery
+  template:
+    metadata:
+      labels:
+        app: service-discovery
+    spec:
+      containers:
+      - name: service-discovery
+        image: selimhorri/service-discovery-ecommerce-boot:0.1.0
+        ports:
+        - containerPort: 8761
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+        - name: SPRING_ZIPKIN_BASE_URL
+          value: "http://zipkin-service:9411"
+        - name: EUREKA_INSTANCE_HOSTNAME
+          value: "service-discovery-service"
+        - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
+          value: "false"
+        - name: EUREKA_CLIENT_FETCH_REGISTRY
+          value: "false"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+          value: "always"
+        resources:
+          requests:
+            memory: "384Mi"
+            cpu: "150m"
+          limits:
+            memory: "768Mi"
+            cpu: "300m"
+        readinessProbe:
+          tcpSocket:
+            port: 8761
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8761
+          initialDelaySeconds: 60
+          periodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-discovery-service
+  namespace: ecommerce-microservices
+  labels:
+    app: service-discovery
+spec:
+  selector:
+    app: service-discovery
+  ports:
+  - port: 8761
+    targetPort: 8761
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-config
+  namespace: ecommerce-microservices
+  labels:
+    app: cloud-config
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloud-config
+  template:
+    metadata:
+      labels:
+        app: cloud-config
+    spec:
+      initContainers:
+      - name: wait-for-services
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z service-discovery-service 8761; do echo waiting for service-discovery; sleep 10; done']
+      containers:
+      - name: cloud-config
+        image: selimhorri/cloud-config-ecommerce-boot:0.1.0
+        ports:
+        - containerPort: 9296
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+        - name: SPRING_ZIPKIN_BASE_URL
+          value: "http://zipkin-service:9411"
+        - name: EUREKA_CLIENT_REGION
+          value: "default"
+        - name: EUREKA_CLIENT_AVAILABILITYZONES_DEFAULT
+          value: "myzone"
+        - name: EUREKA_CLIENT_SERVICEURL_MYZONE
+          value: "http://service-discovery-service:8761/eureka"
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://service-discovery-service:8761/eureka/"
+        - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+          value: "true"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+          value: "always"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        readinessProbe:
+          tcpSocket:
+            port: 9296
+          initialDelaySeconds: 120
+          periodSeconds: 15
+        livenessProbe:
+          tcpSocket:
+            port: 9296
+          initialDelaySeconds: 180
+          periodSeconds: 45
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-config-service
+  namespace: ecommerce-microservices
+  labels:
+    app: cloud-config
+spec:
+  selector:
+    app: cloud-config
+  ports:
+  - port: 9296
+    targetPort: 9296
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: ecommerce-microservices
+  labels:
+    app: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      initContainers:
+      - name: wait-for-services
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z service-discovery-service 8761 && nc -z cloud-config-service 9296; do echo waiting for services; sleep 10; done']
+      containers:
+      - name: user-service
+        image: selimhorri/user-service-ecommerce-boot:0.1.0
+        ports:
+        - containerPort: 8700
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+        - name: SPRING_ZIPKIN_BASE_URL
+          value: "http://zipkin-service:9411"
+        - name: SPRING_CONFIG_IMPORT
+          value: "optional:configserver:http://cloud-config-service:9296/"
+        - name: EUREKA_CLIENT_REGION
+          value: "default"
+        - name: EUREKA_CLIENT_AVAILABILITYZONES_DEFAULT
+          value: "myzone"
+        - name: EUREKA_CLIENT_SERVICEURL_MYZONE
+          value: "http://service-discovery-service:8761/eureka"
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://service-discovery-service:8761/eureka/"
+        - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+          value: "true"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+          value: "always"
+        resources:
+          requests:
+            memory: "384Mi"
+            cpu: "150m"
+          limits:
+            memory: "768Mi"
+            cpu: "300m"
+        readinessProbe:
+          tcpSocket:
+            port: 8700
+          initialDelaySeconds: 180
+          periodSeconds: 15
+        livenessProbe:
+          tcpSocket:
+            port: 8700
+          initialDelaySeconds: 240
+          periodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: ecommerce-microservices
+  labels:
+    app: user-service
+spec:
+  selector:
+    app: user-service
+  ports:
+  - port: 8700
+    targetPort: 8700
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: ecommerce-microservices
+  labels:
+    app: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      initContainers:
+      - name: wait-for-services
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z service-discovery-service 8761 && nc -z cloud-config-service 9296; do echo waiting for services; sleep 10; done']
+      containers:
+      - name: api-gateway
+        image: selimhorri/api-gateway-ecommerce-boot:0.1.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+        - name: SPRING_ZIPKIN_BASE_URL
+          value: "http://zipkin-service:9411"
+        - name: SPRING_CONFIG_IMPORT
+          value: "optional:configserver:http://cloud-config-service:9296/"
+        - name: EUREKA_CLIENT_REGION
+          value: "default"
+        - name: EUREKA_CLIENT_AVAILABILITYZONES_DEFAULT
+          value: "myzone"
+        - name: EUREKA_CLIENT_SERVICEURL_MYZONE
+          value: "http://service-discovery-service:8761/eureka"
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://service-discovery-service:8761/eureka/"
+        - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+          value: "true"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+          value: "always"
+        - name: EUREKA_INSTANCE_LEASE_RENEWAL_INTERVAL_IN_SECONDS
+          value: "10"
+        - name: EUREKA_INSTANCE_LEASE_EXPIRATION_DURATION_IN_SECONDS
+          value: "30"
+        - name: SPRING_FLYWAY_ENABLED
+          value: "true"
+        - name: SERVER_TOMCAT_THREADS_MAX
+          value: "50"
+        resources:
+          requests:
+            memory: "384Mi"
+            cpu: "150m"
+          limits:
+            memory: "768Mi"
+            cpu: "300m"
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 15
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 120
+          periodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-service
+  namespace: ecommerce-microservices
+  labels:
+    app: api-gateway
+spec:
+  selector:
+    app: api-gateway
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy-client
+  namespace: ecommerce-microservices
+  labels:
+    app: proxy-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: proxy-client
+  template:
+    metadata:
+      labels:
+        app: proxy-client
+    spec:
+      initContainers:
+      - name: wait-for-services
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z service-discovery-service 8761 && nc -z cloud-config-service 9296; do echo waiting for services; sleep 10; done']
+      containers:
+      - name: proxy-client
+        image: selimhorri/proxy-client-ecommerce-boot:0.1.0
+        ports:
+        - containerPort: 8900
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+        - name: SPRING_ZIPKIN_BASE_URL
+          value: "http://zipkin-service:9411"
+        - name: SPRING_CONFIG_IMPORT
+          value: "optional:configserver:http://cloud-config-service:9296/"
+        - name: EUREKA_CLIENT_REGION
+          value: "default"
+        - name: EUREKA_CLIENT_AVAILABILITYZONES_DEFAULT
+          value: "myzone"
+        - name: EUREKA_CLIENT_SERVICEURL_MYZONE
+          value: "http://service-discovery-service:8761/eureka"
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://service-discovery-service:8761/eureka/"
+        - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+          value: "true"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+          value: "always"
+        - name: EUREKA_INSTANCE_LEASE_RENEWAL_INTERVAL_IN_SECONDS
+          value: "10"
+        - name: EUREKA_INSTANCE_LEASE_EXPIRATION_DURATION_IN_SECONDS
+          value: "30"
+        - name: FEIGN_CLIENT_CONFIG_DEFAULT_CONNECT_TIMEOUT
+          value: "10000"
+        - name: FEIGN_CLIENT_CONFIG_DEFAULT_READ_TIMEOUT
+          value: "10000"
+        resources:
+          requests:
+            memory: "384Mi"
+            cpu: "150m"
+          limits:
+            memory: "768Mi"
+            cpu: "300m"
+        readinessProbe:
+          tcpSocket:
+            port: 8900
+          initialDelaySeconds: 60
+          periodSeconds: 15
+        livenessProbe:
+          tcpSocket:
+            port: 8900
+          initialDelaySeconds: 120
+          periodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxy-client-service
+  namespace: ecommerce-microservices
+  labels:
+    app: proxy-client
+spec:
+  selector:
+    app: proxy-client
+  ports:
+  - port: 8900
+    targetPort: 8900
+  type: ClusterIP

@@ -1,0 +1,32 @@
+name: Local Deploy to Minikube
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted  # Usa tu runner local
+
+    env:
+      COMPOSE_FILE: ./docker-compose.yml
+      LOAD_SCRIPT: ./load_images-minikube.sh
+      K8S_MANIFEST: ./k8s-optimized.yml
+      NAMESPACE: ecommerce-microservices
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose -f $COMPOSE_FILE build
+
+      - name: Load images into Minikube
+        run: bash $LOAD_SCRIPT
+
+      - name: Deploy to Kubernetes
+        run: kubectl apply -f $K8S_MANIFEST
+
+      - name: Verify pods
+        run: kubectl get pods -n $NAMESPACE

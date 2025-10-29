@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted  # Usa tu runner local
+    runs-on: self-hosted 
 
     env:
       COMPOSE_FILE: ./compose.yml

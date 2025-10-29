@@ -22,12 +22,16 @@ jobs:
 
       - name: Build Docker images
         run: docker compose -f $COMPOSE_FILE build
+        shell: bash
 
       - name: Load images into Minikube
         run: bash $LOAD_SCRIPT
+        shell: bash
 
       - name: Deploy to Kubernetes
         run: kubectl apply -f $K8S_MANIFEST
+        shell: bash
 
       - name: Verify pods
         run: kubectl get pods -n $NAMESPACE
+        shell: bash

@@ -24,7 +24,7 @@ jobs:
         run: docker compose -f $COMPOSE_FILE build
 
       - name: Load images into Minikube
-        run: bash $LOAD_SCRIPT
+        run: bat $LOAD_SCRIPT
 
       - name: Deploy to Kubernetes
         run: kubectl apply -f $K8S_MANIFEST

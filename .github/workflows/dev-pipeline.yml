@@ -15,19 +15,34 @@ jobs:
       LOAD_SCRIPT: ./load-images-minikube.bat
       K8S_MANIFEST: ./k8s-optimized.yaml
       NAMESPACE: ecommerce-microservices
+      skip_deploy: "false"
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Check if pods are ready
+        run: |
+          $pods = kubectl get pods -n $env:NAMESPACE --no-headers
+          if ($pods -and ($pods -notmatch "0/") -and ($pods -match "Running")) {
+            Write-Host "✅ Todos los pods están en estado Running y listos. Saltando despliegue."
+            echo "skip_deploy=true" >> $env:GITHUB_ENV
+          } else {
+            Write-Host "🚀 Algunos pods no están listos. Procediendo con el despliegue."
+            echo "skip_deploy=false" >> $env:GITHUB_ENV
+          }
+
       - name: Build Docker images
+        if: env.skip_deploy == 'false'
         run: docker compose -f $env:COMPOSE_FILE build
 
       - name: Load images into Minikube
+        if: env.skip_deploy == 'false'
         run: |
           & $env:LOAD_SCRIPT
 
       - name: Deploy to Kubernetes
+        if: env.skip_deploy == 'false'
         run: kubectl apply -f $env:K8S_MANIFEST
 
       - name: Verify pods

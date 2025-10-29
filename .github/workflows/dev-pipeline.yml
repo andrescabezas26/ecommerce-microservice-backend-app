@@ -12,7 +12,7 @@ jobs:
 
     env:
       COMPOSE_FILE: ./compose.yml
-      LOAD_SCRIPT: ./load-images-minikube.sh
+      LOAD_SCRIPT: ./load-images-minikube.bat
       K8S_MANIFEST: ./k8s-optimized.yaml
       NAMESPACE: ecommerce-microservices
 
@@ -21,13 +21,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker images
-        run: docker compose -f $COMPOSE_FILE build
+        run: docker compose -f $env:COMPOSE_FILE build
 
       - name: Load images into Minikube
-        run: bat $LOAD_SCRIPT
+        run: |
+          & $env:LOAD_SCRIPT
 
       - name: Deploy to Kubernetes
-        run: kubectl apply -f $K8S_MANIFEST
+        run: kubectl apply -f $env:K8S_MANIFEST
 
       - name: Verify pods
-        run: kubectl get pods -n $NAMESPACE
+        run: kubectl get pods -n $env:NAMESPACE

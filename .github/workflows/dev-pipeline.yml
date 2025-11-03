@@ -85,4 +85,4 @@ jobs:
       - name: List built images
         run: |
           Write-Host "📋 Docker images built:"
-          docker images | grep -E "(user-service|order-service|product-service|payment-service|shipping-service|api-gateway|service-discovery|cloud-config)"
+          docker images | Select-String -Pattern "(user-service|order-service|product-service|payment-service|shipping-service|api-gateway|service-discovery|cloud-config)"

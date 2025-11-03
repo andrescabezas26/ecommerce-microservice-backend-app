@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-config
+  namespace: ecommerce-microservices
+  labels:
+    app: cloud-config
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloud-config
+  template:
+    metadata:
+      labels:
+        app: cloud-config
+    spec:
+      initContainers:
+      - name: wait-for-services
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z service-discovery-service 8761; do echo waiting for service-discovery; sleep 10; done']
+      containers:
+      - name: cloud-config
+        image: selimhorri/cloud-config-ecommerce-boot:0.1.0
+        ports:
+        - containerPort: 9296
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+        - name: SPRING_ZIPKIN_BASE_URL
+          value: "http://zipkin-service:9411"
+        - name: EUREKA_CLIENT_REGION
+          value: "default"
+        - name: EUREKA_CLIENT_AVAILABILITYZONES_DEFAULT
+          value: "myzone"
+        - name: EUREKA_CLIENT_SERVICEURL_MYZONE
+          value: "http://service-discovery-service:8761/eureka"
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://service-discovery-service:8761/eureka/"
+        - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+          value: "true"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "*"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+          value: "always"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        readinessProbe:
+          tcpSocket:
+            port: 9296
+          initialDelaySeconds: 120
+          periodSeconds: 15
+        livenessProbe:
+          tcpSocket:
+            port: 9296
+          initialDelaySeconds: 180
+          periodSeconds: 45
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-config-service
+  namespace: ecommerce-microservices
+  labels:
+    app: cloud-config
+spec:
+  selector:
+    app: cloud-config
+  ports:
+  - port: 9296
+    targetPort: 9296
+  type: ClusterIP

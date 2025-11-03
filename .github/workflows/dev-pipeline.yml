@@ -13,7 +13,7 @@ jobs:
     env:
       COMPOSE_FILE: ./compose.yml
       LOAD_SCRIPT: ./load-images-minikube.bat
-      K8S_MANIFEST: ./k8s-optimized.yaml
+      DEPLOY_SCRIPT: ./deploy-individual-services.bat
       NAMESPACE: ecommerce-microservices
       skip_deploy: "false"
 
@@ -43,7 +43,8 @@ jobs:
 
       - name: Deploy to Kubernetes
         if: env.skip_deploy == 'false'
-        run: kubectl apply -f $env:K8S_MANIFEST
+        run: |
+          & $env:DEPLOY_SCRIPT
 
       - name: Verify pods
         run: kubectl get pods -n $env:NAMESPACE

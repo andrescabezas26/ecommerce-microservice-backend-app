@@ -1,50 +1,88 @@
-name: Local Deploy to Minikube
+name: Development CI Pipeline
 
 on:
   push:
     branches:
       - main
       - master
+  pull_request:
+    branches:
+      - main
+      - master
 
 jobs:
-  build-and-deploy:
+  build-and-test:
     runs-on: self-hosted 
 
     env:
       COMPOSE_FILE: ./compose.yml
-      LOAD_SCRIPT: ./load-images-minikube.bat
-      DEPLOY_SCRIPT: ./deploy-individual-services.bat
-      NAMESPACE: ecommerce-microservices
-      skip_deploy: "false"
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Check if pods are ready
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Run tests for all services
         run: |
-          $pods = kubectl get pods -n $env:NAMESPACE --no-headers
-          if ($pods -and ($pods -notmatch "0/") -and ($pods -match "Running")) {
-            Write-Host "✅ Todos los pods están en estado Running y listos. Saltando despliegue."
-            echo "skip_deploy=true" >> $env:GITHUB_ENV
-          } else {
-            Write-Host "🚀 Algunos pods no están listos. Procediendo con el despliegue."
-            echo "skip_deploy=false" >> $env:GITHUB_ENV
-          }
+          Write-Host "🧪 Running unit tests for all microservices..."
+          
+          # Test user-service
+          Write-Host "Testing user-service..."
+          cd user-service
+          mvn clean test
+          cd ..
+          
+          # Test order-service
+          Write-Host "Testing order-service..."
+          cd order-service
+          mvn clean test
+          cd ..
+          
+          # Test product-service
+          Write-Host "Testing product-service..."
+          cd product-service
+          mvn clean test
+          cd ..
+          
+          # Test payment-service
+          Write-Host "Testing payment-service..."
+          cd payment-service
+          mvn clean test
+          cd ..
+          
+          # Test shipping-service
+          Write-Host "Testing shipping-service..."
+          cd shipping-service
+          mvn clean test
+          cd ..
+          
+          # Test api-gateway
+          Write-Host "Testing api-gateway..."
+          cd api-gateway
+          mvn clean test
+          cd ..
+          
+          Write-Host "✅ All tests completed successfully!"
 
       - name: Build Docker images
-        if: env.skip_deploy == 'false'
-        run: docker compose -f $env:COMPOSE_FILE build
-
-      - name: Load images into Minikube
-        if: env.skip_deploy == 'false'
         run: |
-          & $env:LOAD_SCRIPT
+          Write-Host "🐳 Building Docker images for all services..."
+          docker compose -f $env:COMPOSE_FILE build
+          Write-Host "✅ All Docker images built successfully!"
 
-      - name: Deploy to Kubernetes
-        if: env.skip_deploy == 'false'
+      - name: List built images
         run: |
-          & $env:DEPLOY_SCRIPT
-
-      - name: Verify pods
-        run: kubectl get pods -n $env:NAMESPACE
+          Write-Host "📋 Docker images built:"
+          docker images | grep -E "(user-service|order-service|product-service|payment-service|shipping-service|api-gateway|service-discovery|cloud-config)"

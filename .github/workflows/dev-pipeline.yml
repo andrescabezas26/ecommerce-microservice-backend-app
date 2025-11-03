@@ -81,16 +81,3 @@ jobs:
           Write-Host "🐳 Building Docker images for all services..."
           docker compose -f $env:COMPOSE_FILE build
           Write-Host "✅ All Docker images built successfully!"
-
-      - name: List built images
-        run: |
-          Write-Host "📋 Docker images built:"
-          Write-Host "Listing all ecommerce images..."
-          docker images --filter "reference=*user-service*"
-          docker images --filter "reference=*order-service*"
-          docker images --filter "reference=*product-service*"
-          docker images --filter "reference=*payment-service*"
-          docker images --filter "reference=*shipping-service*"
-          docker images --filter "reference=*api-gateway*"
-          docker images --filter "reference=*service-discovery*"
-          docker images --filter "reference=*cloud-config*"

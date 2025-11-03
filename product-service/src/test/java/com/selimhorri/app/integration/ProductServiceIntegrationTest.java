@@ -106,7 +106,8 @@ class ProductServiceIntegrationTest {
 
     @Test
     void searchProductsBySku_shouldHandleTransientEntity() throws Exception {
-        // given - Crear un CategoryDto con ID inexistente para provocar TransientPropertyValueException
+        // given - Crear un CategoryDto con ID inexistente para provocar
+        // TransientPropertyValueException
         CategoryDto categoryDto = CategoryDto.builder()
                 .categoryId(999) // ID que no existe en la base de datos
                 .categoryTitle("Search Test Category")

@@ -117,7 +117,8 @@ class ShippingServiceIntegrationTest {
 
         String orderItemIdJson = objectMapper.writeValueAsString(orderItemId);
 
-        // when & then - should throw OrderItemNotFoundException for non-existent order item
+        // when & then - should throw OrderItemNotFoundException for non-existent order
+        // item
         boolean exceptionThrown = false;
         try {
             mockMvc.perform(get("/api/shippings/find")
@@ -126,7 +127,8 @@ class ShippingServiceIntegrationTest {
         } catch (Exception e) {
             exceptionThrown = true;
             assertThat(e).isInstanceOf(NestedServletException.class);
-            assertThat(e.getCause()).hasMessageContaining("OrderItem with id: OrderItemId(productId=999, orderId=999) not found");
+            assertThat(e.getCause())
+                    .hasMessageContaining("OrderItem with id: OrderItemId(productId=999, orderId=999) not found");
         }
         assertThat(exceptionThrown).isTrue();
     }
@@ -146,7 +148,8 @@ class ShippingServiceIntegrationTest {
                 .orderFee(299.97)
                 .build();
 
-        // Mock the RestTemplate calls that simulate communication with product-service and order-service
+        // Mock the RestTemplate calls that simulate communication with product-service
+        // and order-service
         when(restTemplate.getForObject(anyString(), eq(ProductDto.class)))
                 .thenReturn(mockProductDto);
         when(restTemplate.getForObject(anyString(), eq(OrderDto.class)))

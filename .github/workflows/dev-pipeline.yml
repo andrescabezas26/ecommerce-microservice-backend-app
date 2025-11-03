@@ -85,4 +85,12 @@ jobs:
       - name: List built images
         run: |
           Write-Host "📋 Docker images built:"
-          docker images | Select-String -Pattern "(user-service|order-service|product-service|payment-service|shipping-service|api-gateway|service-discovery|cloud-config)"
+          Write-Host "Listing all ecommerce images..."
+          docker images --filter "reference=*user-service*"
+          docker images --filter "reference=*order-service*"
+          docker images --filter "reference=*product-service*"
+          docker images --filter "reference=*payment-service*"
+          docker images --filter "reference=*shipping-service*"
+          docker images --filter "reference=*api-gateway*"
+          docker images --filter "reference=*service-discovery*"
+          docker images --filter "reference=*cloud-config*"

@@ -1,8 +1,6 @@
-
 server:
   servlet:
     context-path: /
-
 spring:
   zipkin:
     base-url: ${SPRING_ZIPKIN_BASE_URL:http://localhost:9411/}
@@ -33,34 +31,19 @@ spring:
               - PATCH
               - OPTIONS
       routes:
-      - id: ORDER-SERVICE
-        uri: lb://ORDER-SERVICE
-        predicates:
-        - Path=/order-service/**
-      - id: PAYMENT-SERVICE
-        uri: lb://PAYMENT-SERVICE
-        predicates:
-        - Path=/payment-service/**
-      - id: PRODUCT-SERVICE
-        uri: lb://PRODUCT-SERVICE
-        predicates:
-        - Path=/product-service/**
-      - id: SHIPPING-SERVICE
-        uri: lb://SHIPPING-SERVICE
-        predicates:
-        - Path=/shipping-service/**
-      - id: USER-SERVICE
-        uri: lb://USER-SERVICE
-        predicates:
-        - Path=/user-service/**
-      - id: FAVOURITE-SERVICE
-        uri: lb://FAVOURITE-SERVICE
-        predicates:
-        - Path=/favourite-service/**
-      - id: PROXY-CLIENT
+      # Regla única para enrutar todos los servicios a través del PROXY-CLIENT.
+      # El proxy se encargará de la lógica de negocio y el enrutamiento final.
+      - id: proxy-all-services
         uri: lb://PROXY-CLIENT
         predicates:
-        - Path=/app/**
+        # Captura cualquier petición que comience con el nombre de un servicio
+        # (ej. /user-service, /order-service, etc.)
+        - Path=/{service}/**
+        filters:
+        # Re-escribe la ruta para que el proxy la entienda.
+        # El proxy tiene un context-path de /app.
+        # Ejemplo: /user-service/api/users -> /app/user-service/api/users
+        - RewritePath=/(?<segment>.*), /app/$\{segment}
 
 resilience4j:
   circuitbreaker:
@@ -83,13 +66,3 @@ management:
   endpoint:
     health:
       show-details: always
-
-
-
-
-
-
-
-
- 
- 

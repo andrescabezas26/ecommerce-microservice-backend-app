@@ -55,7 +55,7 @@ jobs:
             if (Test-Path "$service/src/test/java") {
               Write-Host "Running integration tests for $service..."
               cd $service
-              mvn test -Dtest="*IntegrationTest" -Dspring.profiles.active=test -Dmaven.test.failure.ignore=true
+              mvn test `-Dtest=*IntegrationTest `-Dspring.profiles.active=test `-Dmaven.test.failure.ignore=true
               cd ..
             }
           }

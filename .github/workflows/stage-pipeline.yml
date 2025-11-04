@@ -65,18 +65,29 @@ jobs:
       - name: Check if Minikube exists
         id: check_minikube
         shell: powershell
+        continue-on-error: true
         run: |
+          Write-Host "Checking Minikube status..."
+          
+          $minikubeRunning = $false
+          
           try {
-            $status = minikube status 2>$null
-            if ($status -match "Running") {
+            $status = minikube status 2>&1
+            Write-Host "Minikube status output:"
+            Write-Host $status
+            
+            if ($status -match "Running" -or $status -match "host: Running") {
               Write-Host "Minikube is running"
-              echo "minikube_exists=true" >> $env:GITHUB_OUTPUT
-            } else {
-              Write-Host "Minikube exists but is not running"
-              echo "minikube_exists=false" >> $env:GITHUB_OUTPUT
+              $minikubeRunning = $true
             }
           } catch {
-            Write-Host "Minikube does not exist"
+            Write-Host "Could not get Minikube status: $_"
+          }
+          
+          if ($minikubeRunning) {
+            echo "minikube_exists=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "Minikube is not running or does not exist"
             echo "minikube_exists=false" >> $env:GITHUB_OUTPUT
           }
 

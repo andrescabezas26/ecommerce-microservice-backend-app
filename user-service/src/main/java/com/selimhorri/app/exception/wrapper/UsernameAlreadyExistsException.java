@@ -1,0 +1,7 @@
+package com.selimhorri.app.exception.wrapper;
+
+public class UsernameAlreadyExistsException extends RuntimeException {
+    public UsernameAlreadyExistsException(String message) {
+        super(message);
+    }
+}

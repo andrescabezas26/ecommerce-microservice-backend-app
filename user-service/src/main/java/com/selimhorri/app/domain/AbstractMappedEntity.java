@@ -5,12 +5,8 @@ import java.time.Instant;
 
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
-
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonFormat.Shape;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -21,20 +17,26 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @Data
-abstract public class AbstractMappedEntity implements Serializable {
+public abstract class AbstractMappedEntity implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
-	@CreatedDate
-	@JsonFormat(shape = Shape.STRING)
-	@Column(name = "created_at")
+	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 	
-	@LastModifiedDate
-	@JsonFormat(shape = Shape.STRING)
-	@Column(name = "updated_at")
+	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
-	
+
+	@PrePersist
+	public void prePersist() {
+		this.createdAt = Instant.now();
+		this.updatedAt = Instant.now();
+	}
+
+	@PreUpdate
+	public void preUpdate() {
+		this.updatedAt = Instant.now();
+	}
 }
 
 

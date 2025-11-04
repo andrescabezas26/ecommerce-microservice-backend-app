@@ -47,7 +47,7 @@ public class ApiExceptionHandler {
 		UserObjectNotFoundException.class,
 		CredentialNotFoundException.class,
 		VerificationTokenNotFoundException.class,
-		AddressNotFoundException.class
+		AddressNotFoundException.class,
 	})
 	public <T extends RuntimeException> ResponseEntity<ExceptionMsg> handleApiRequestException(final T e) {
 		

@@ -44,6 +44,14 @@ public class UserResource {
 		return ResponseEntity.ok(this.userService.findById(Integer.parseInt(userId.strip())));
 	}
 	
+	@GetMapping("/username/{username}")
+	public ResponseEntity<UserDto> findByUsername(
+			@PathVariable("username") 
+			@NotBlank(message = "Input must not blank") 
+			@Valid final String username) {
+		return ResponseEntity.ok(this.userService.findByUsername(username));
+	}
+
 	@PostMapping
 	public ResponseEntity<UserDto> save(
 			@RequestBody 
@@ -78,17 +86,7 @@ public class UserResource {
 		log.info("*** Boolean, resource; delete user by id *");
 		this.userService.deleteById(Integer.parseInt(userId));
 		return ResponseEntity.ok(true);
-	}
-	
-	@GetMapping("/username/{username}")
-	public ResponseEntity<UserDto> findByUsername(
-			@PathVariable("username") 
-			@NotBlank(message = "Input must not blank") 
-			@Valid final String username) {
-		return ResponseEntity.ok(this.userService.findByUsername(username));
-	}
-	
-	
+	}	
 	
 }
 

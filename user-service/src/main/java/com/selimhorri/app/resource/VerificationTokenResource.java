@@ -53,15 +53,6 @@ public class VerificationTokenResource {
 		return ResponseEntity.ok(this.verificationTokenService.save(verificationTokenDto));
 	}
 	
-	@PutMapping
-	public ResponseEntity<VerificationTokenDto> update(
-			@RequestBody 
-			@NotNull(message = "Input must not NULL") 
-			@Valid final VerificationTokenDto verificationTokenDto) {
-		log.info("*** VerificationTokenDto, resource; update verificationToken *");
-		return ResponseEntity.ok(this.verificationTokenService.update(verificationTokenDto));
-	}
-	
 	@PutMapping("/{verificationTokenId}")
 	public ResponseEntity<VerificationTokenDto> update(
 			@PathVariable("verificationTokenId") 

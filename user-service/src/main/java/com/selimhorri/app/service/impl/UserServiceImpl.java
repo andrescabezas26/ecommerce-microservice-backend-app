@@ -69,13 +69,11 @@ public class UserServiceImpl implements UserService {
 	public UserDto update(final UserDto userDto) {
 		log.info("*** UserDto, service; update user ***");
 
-		// Buscar el usuario y verificar que tenga credenciales
 		User existingUser = this.userRepository.findById(userDto.getUserId())
-				.filter(user -> user.getCredential() != null) // Solo si tiene credenciales
+				.filter(user -> user.getCredential() != null)
 				.orElseThrow(() -> new EntityNotFoundException(
 						"User not found or has no credentials (cannot update)"));
 
-		// Actualizar campos permitidos
 		existingUser.setFirstName(userDto.getFirstName());
 		existingUser.setLastName(userDto.getLastName());
 		existingUser.setImageUrl(userDto.getImageUrl());
@@ -89,13 +87,11 @@ public class UserServiceImpl implements UserService {
 	public UserDto update(final Integer userId, final UserDto userDto) {
 		log.info("*** UserDto, service; update user with userId ***");
 
-		// Verificar que el usuario existe y tiene credenciales
 		User existingUser = this.userRepository.findById(userId)
-				.filter(user -> user.getCredential() != null) // Solo si tiene credenciales
+				.filter(user -> user.getCredential() != null)
 				.orElseThrow(() -> new EntityNotFoundException(
 						"User not found with id: " + userId + " or has no credentials (cannot update)"));
 
-		// Actualizar campos permitidos
 		existingUser.setFirstName(userDto.getFirstName());
 		existingUser.setLastName(userDto.getLastName());
 		existingUser.setImageUrl(userDto.getImageUrl());
@@ -106,11 +102,10 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	@Transactional // Asegura que sea una transacción atómica
+	@Transactional
 	public void deleteById(final Integer userId) {
 		log.info("*** Void, service; delete credentials from user by id ***");
 
-		// 1. Buscar el usuario y verificar que existe y tiene credenciales
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
 
@@ -118,14 +113,11 @@ public class UserServiceImpl implements UserService {
 			throw new UserObjectNotFoundException("User with id: " + userId + " has no credentials to delete");
 		}
 
-		// 2. Obtener el ID de las credenciales para borrarlas
 		Integer credentialsId = user.getCredential().getCredentialId();
 
-		// 3. Desvincular las credenciales del usuario (para evitar inconsistencias)
 		user.setCredential(null);
-		userRepository.save(user); // Guardar el cambio
+		userRepository.save(user);
 
-		// 4. Borrar las credenciales de la base de datos
 		credentialRepository.deleteByCredentialId(credentialsId);
 	}
 

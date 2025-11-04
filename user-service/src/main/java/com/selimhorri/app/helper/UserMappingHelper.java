@@ -71,7 +71,7 @@ public interface UserMappingHelper {
 				.credential(credential)
 				.build();
 
-		credential.setUser(user); // ← IMPORTANTE: establecer la relación inversa
+		credential.setUser(user);
 
 		return user;
 	}

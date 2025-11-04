@@ -54,16 +54,12 @@ public class AddressServiceImpl implements AddressService {
 	public AddressDto update(final AddressDto addressDto) {
 		log.info("*** AddressDto, service; update address *");
 
-		// Buscar la dirección existente
 		Address existingAddress = this.addressRepository.findById(addressDto.getAddressId())
 				.orElseThrow(() -> new AddressNotFoundException("Address not found"));
 
-		// Actualizar los campos editables
 		existingAddress.setFullAddress(addressDto.getFullAddress());
 		existingAddress.setPostalCode(addressDto.getPostalCode());
 		existingAddress.setCity(addressDto.getCity());
-
-		// NO se cambia el usuario aquí, para mantener la asociación original
 
 		Address updatedAddress = this.addressRepository.save(existingAddress);
 		return AddressMappingHelper.map(updatedAddress);
@@ -76,14 +72,9 @@ public class AddressServiceImpl implements AddressService {
 		Address existingAddress = addressRepository.findById(addressId)
 				.orElseThrow(() -> new AddressNotFoundException("Address not found"));
 
-		// Actualizar campos permitidos
 		existingAddress.setFullAddress(addressDto.getFullAddress());
 		existingAddress.setPostalCode(addressDto.getPostalCode());
 		existingAddress.setCity(addressDto.getCity());
-
-		// Mantener la relación con el usuario original (no la sobreescribas con datos
-		// del DTO)
-		// NO hacer: existingAddress.setUser(mappedUserFromDto);
 
 		Address updatedAddress = addressRepository.save(existingAddress);
 		return AddressMappingHelper.map(updatedAddress);

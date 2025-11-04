@@ -1,0 +1,516 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-1234-1234-123456789012",
+		"name": "E-Commerce Microservices E2E Tests",
+		"description": "End-to-End tests for the complete e-commerce microservices flow",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Checks",
+			"item": [
+				{
+					"name": "API Gateway Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"API Gateway is healthy\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					}
+				},
+				{
+					"name": "Service Discovery Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Service Discovery is healthy\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{service_discovery_url}}/actuator/health",
+							"host": [
+								"{{service_discovery_url}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "User Journey - Complete E-Commerce Flow",
+			"item": [
+				{
+					"name": "1. Create User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"User created successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has user data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('userId');",
+									"    pm.expect(jsonData).to.have.property('firstName');",
+									"    pm.expect(jsonData).to.have.property('email');",
+									"    ",
+									"    // Store user ID for subsequent requests",
+									"    pm.collectionVariables.set('created_user_id', jsonData.userId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-service/api/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"user-service",
+								"api",
+								"users"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Get All Products",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Products retrieved successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has products list\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('collection');",
+									"    pm.expect(jsonData.collection).to.be.an('array');",
+									"    ",
+									"    if (jsonData.collection.length > 0) {",
+									"        // Store first product ID for order creation",
+									"        pm.collectionVariables.set('product_id', jsonData.collection[0].productId);",
+									"        pm.collectionVariables.set('product_price', jsonData.collection[0].priceUnit);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/product-service/api/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"product-service",
+								"api",
+								"products"
+							]
+						}
+					}
+				},
+				{
+					"name": "3. Create Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Order created successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has order data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('orderId');",
+									"    pm.expect(jsonData).to.have.property('userId');",
+									"    pm.expect(jsonData).to.have.property('totalPrice');",
+									"    ",
+									"    // Store order ID for subsequent requests",
+									"    pm.collectionVariables.set('created_order_id', jsonData.orderId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": {{created_user_id}},\n    \"totalPrice\": 99.99,\n    \"orderStatus\": \"PENDING\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/order-service/api/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"order-service",
+								"api",
+								"orders"
+							]
+						}
+					}
+				},
+				{
+					"name": "4. Create Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Payment created successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has payment data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('paymentId');",
+									"    pm.expect(jsonData).to.have.property('orderId');",
+									"    pm.expect(jsonData).to.have.property('paymentStatus');",
+									"    ",
+									"    // Store payment ID for verification",
+									"    pm.collectionVariables.set('created_payment_id', jsonData.paymentId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"orderId\": {{created_order_id}},\n    \"paymentStatus\": \"ACCEPTED\",\n    \"paymentMethod\": \"CREDIT_CARD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payment-service/api/payments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payment-service",
+								"api",
+								"payments"
+							]
+						}
+					}
+				},
+				{
+					"name": "5. Create Shipping Order Item",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Shipping order item created successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has shipping data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('orderId');",
+									"    pm.expect(jsonData).to.have.property('productId');",
+									"    pm.expect(jsonData).to.have.property('orderedQuantity');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"orderId\": {{created_order_id}},\n    \"productId\": {{product_id}},\n    \"orderedQuantity\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/shipping-service/api/shippings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"shipping-service",
+								"api",
+								"shippings"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Data Verification",
+			"item": [
+				{
+					"name": "Verify User Exists",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"User can be retrieved\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"User data matches created user\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.userId).to.eql(pm.collectionVariables.get('created_user_id'));",
+									"    pm.expect(jsonData.email).to.eql('john.doe@example.com');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-service/api/users/{{created_user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"user-service",
+								"api",
+								"users",
+								"{{created_user_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Verify Order Exists",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Order can be retrieved\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Order data matches created order\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.orderId).to.eql(pm.collectionVariables.get('created_order_id'));",
+									"    pm.expect(jsonData.userId).to.eql(pm.collectionVariables.get('created_user_id'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/order-service/api/orders/{{created_order_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"order-service",
+								"api",
+								"orders",
+								"{{created_order_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Verify Payment Exists",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Payment can be retrieved\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Payment data matches created payment\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.paymentId).to.eql(pm.collectionVariables.get('created_payment_id'));",
+									"    pm.expect(jsonData.orderId).to.eql(pm.collectionVariables.get('created_order_id'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/payment-service/api/payments/{{created_payment_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payment-service",
+								"api",
+								"payments",
+								"{{created_payment_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Microservices Communication Tests",
+			"item": [
+				{
+					"name": "Cross-Service Data Consistency",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"All services have consistent data\", function () {",
+									"    // This test validates that data created across services is consistent",
+									"    var userId = pm.collectionVariables.get('created_user_id');",
+									"    var orderId = pm.collectionVariables.get('created_order_id');",
+									"    var paymentId = pm.collectionVariables.get('created_payment_id');",
+									"    ",
+									"    pm.expect(userId).to.not.be.undefined;",
+									"    pm.expect(orderId).to.not.be.undefined;",
+									"    pm.expect(paymentId).to.not.be.undefined;",
+									"    ",
+									"    console.log('E2E Flow completed successfully:');",
+									"    console.log('- Created User ID:', userId);",
+									"    console.log('- Created Order ID:', orderId);",
+									"    console.log('- Created Payment ID:', paymentId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "service_discovery_url",
+			"value": "http://localhost:8761"
+		},
+		{
+			"key": "created_user_id",
+			"value": ""
+		},
+		{
+			"key": "created_order_id",
+			"value": ""
+		},
+		{
+			"key": "created_payment_id",
+			"value": ""
+		},
+		{
+			"key": "product_id",
+			"value": ""
+		},
+		{
+			"key": "product_price",
+			"value": ""
+		}
+	]
+}

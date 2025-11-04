@@ -159,14 +159,17 @@ jobs:
         run: |
           Write-Host "Deploying services to Kubernetes..."
           
+          # Create the namespace
           kubectl create namespace $env:NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
           
-          if (Test-Path "k8s-optimized.yaml") {
-            kubectl apply -f k8s-optimized.yaml
-          } elseif (Test-Path "k8s/") {
-            kubectl apply -f k8s/
+          # Use the deploy script instead of manifests
+          if (Test-Path $env:DEPLOY_SCRIPT) {
+            Write-Host "Using deployment script: $env:DEPLOY_SCRIPT"
+            & $env:DEPLOY_SCRIPT
           } else {
-            Write-Host "Kubernetes manifests not found"
+            Write-Host "❌ Deploy script not found: $env:DEPLOY_SCRIPT"
+            Write-Host "Available files in current directory:"
+            Get-ChildItem -Name "*.bat"
             exit 1
           }
 
@@ -218,3 +221,77 @@ jobs:
           Write-Host "Stage environment ready for manual testing!"
           Write-Host "Access services using:"
           Write-Host "minikube service api-gateway-service -n ecommerce-microservices"
+
+  e2e-tests:
+    runs-on: self-hosted
+    needs: stage-deploy
+    if: success()
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for Newman
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: e2e-tests/package.json
+
+      - name: Install Newman and Dependencies
+        working-directory: e2e-tests
+        run: |
+          Write-Output "📦 Installing Newman and dependencies..."
+          npm install --legacy-peer-deps
+          npm install -g newman newman-reporter-htmlextra
+
+      - name: Wait for Services to be Ready
+        working-directory: e2e-tests
+        run: |
+          Write-Output "⏳ Waiting for services to be ready for E2E testing..."
+          node wait-for-services.js
+
+      - name: Run E2E Tests
+        working-directory: e2e-tests
+        run: |
+          Write-Output "🧪 Running End-to-End tests..."
+          newman run ecommerce-e2e-collection.json -e local-environment.json --reporters cli,json,htmlextra --reporter-json-export results/newman-report.json --reporter-htmlextra-export results/newman-report.html --delay-request 1000 --timeout-request 10000
+
+      - name: Generate E2E Test Summary
+        if: always()
+        working-directory: e2e-tests
+        run: |
+          if (Test-Path "results/newman-report.json") {
+            Write-Output "📊 E2E Test Results Summary:"
+            $report = Get-Content "results/newman-report.json" | ConvertFrom-Json
+            $stats = $report.run.stats
+            
+            Write-Output "  📋 Total Requests: $($stats.requests.total)"
+            Write-Output "  ✅ Passed: $($stats.requests.total - $stats.requests.failed)"
+            Write-Output "  ❌ Failed: $($stats.requests.failed)"
+            Write-Output "  ⏱️  Average Response Time: $([Math]::Round($stats.requests.average))ms"
+            Write-Output "  📈 Total Response Time: $($stats.requests.totalTime)ms"
+            
+            if ($stats.requests.failed -gt 0) {
+              Write-Output "💥 Some E2E tests failed!"
+              $report.run.executions | Where-Object { $_.response.code -ge 400 } | ForEach-Object {
+                Write-Output "  ❌ Failed: $($_.item.name) - Status: $($_.response.code)"
+              }
+              exit 1
+            } else {
+              Write-Output "🎉 All E2E tests passed successfully!"
+            }
+          } else {
+            Write-Output "❌ E2E test report not found"
+            exit 1
+          }
+
+      - name: Upload E2E Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-reports
+          path: |
+            e2e-tests/results/newman-report.json
+            e2e-tests/results/newman-report.html
+          retention-days: 30

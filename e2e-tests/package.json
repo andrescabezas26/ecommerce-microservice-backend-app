@@ -1,0 +1,23 @@
+{
+  "name": "E-Commerce E2E Tests",
+  "version": "1.0.0",
+  "description": "Newman configuration for E2E testing of microservices",
+  "main": "index.js",
+  "scripts": {
+    "test:e2e:local": "newman run ecommerce-e2e-collection.json -e local-environment.json --reporters cli,json --reporter-json-export results/newman-report.json",
+    "test:e2e:local:verbose": "newman run ecommerce-e2e-collection.json -e local-environment.json --reporters cli,json,htmlextra --reporter-json-export results/newman-report.json --reporter-htmlextra-export results/newman-report.html --verbose",
+    "test:e2e:minikube": "newman run ecommerce-e2e-collection.json -e minikube-environment.json --reporters cli,json,htmlextra --reporter-json-export results/newman-report.json --reporter-htmlextra-export results/newman-report.html --delay-request 1000",
+    "test:e2e:minikube:quick": "newman run ecommerce-e2e-collection.json -e minikube-environment.json --reporters cli,json --reporter-json-export results/newman-report.json",
+    "test:e2e:pipeline": "newman run ecommerce-e2e-collection.json -e pipeline-environment.json --reporters cli,json --reporter-json-export results/newman-report.json --delay-request 2000",
+    "test:e2e:wait-for-services": "node wait-for-services.js && npm run test:e2e:local",
+    "install:newman": "npm install -g newman newman-reporter-htmlextra"
+  },
+  "devDependencies": {
+    "newman": "^6.0.0",
+    "newman-reporter-htmlextra": "^1.23.0",
+    "axios": "^1.6.0"
+  },
+  "keywords": ["e2e", "testing", "microservices", "newman", "postman"],
+  "author": "E-Commerce Team",
+  "license": "MIT"
+}

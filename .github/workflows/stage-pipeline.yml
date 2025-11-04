@@ -45,58 +45,57 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: Run Integration Tests
+        shell: powershell
         run: |
-          Write-Host "🔗 Running integration tests for microservices communication..."
+          Write-Host "Running integration tests for microservices communication..."
           
-          # Run integration tests for each service
           $services = @("user-service", "order-service", "product-service", "payment-service", "shipping-service")
           
           foreach ($service in $services) {
             if (Test-Path "$service/src/test/java") {
-              Write-Host "🧪 Running integration tests for $service..."
+              Write-Host "Running integration tests for $service..."
               cd $service
               mvn test -Dtest="*IntegrationTest" -Dspring.profiles.active=test -Dmaven.test.failure.ignore=true
               cd ..
             }
           }
           
-          Write-Host "✅ Integration tests completed!"
+          Write-Host "Integration tests completed!"
 
       - name: Check if Minikube exists
         id: check_minikube
+        shell: powershell
         run: |
           try {
             $status = minikube status 2>$null
             if ($status -match "Running") {
-              Write-Host "✅ Minikube está corriendo"
+              Write-Host "Minikube is running"
               echo "minikube_exists=true" >> $env:GITHUB_OUTPUT
             } else {
-              Write-Host "⚠️ Minikube existe pero no está corriendo"
+              Write-Host "Minikube exists but is not running"
               echo "minikube_exists=false" >> $env:GITHUB_OUTPUT
             }
           } catch {
-            Write-Host "❌ Minikube no existe"
+            Write-Host "Minikube does not exist"
             echo "minikube_exists=false" >> $env:GITHUB_OUTPUT
           }
 
       - name: Clean existing Minikube namespace and images
         if: steps.check_minikube.outputs.minikube_exists == 'true' && github.event.inputs.force_recreate_minikube != 'true'
+        shell: powershell
         run: |
-          Write-Host "🧹 Limpiando namespace y recursos existentes..."
+          Write-Host "Cleaning namespace and existing resources..."
           
-          # Eliminar el namespace y todos sus recursos
           kubectl delete namespace $env:NAMESPACE --ignore-not-found=true
           
-          # Esperar a que el namespace se elimine completamente
           do {
             $ns = kubectl get namespace $env:NAMESPACE --ignore-not-found=true 2>$null
             if (-not $ns) { break }
-            Write-Host "⏳ Esperando que se elimine el namespace..."
+            Write-Host "Waiting for namespace to be deleted..."
             Start-Sleep -Seconds 5
           } while ($true)
           
-          # Limpiar imágenes cargadas en Minikube (las que vamos a reemplazar)
-          Write-Host "�️ Eliminando imágenes anteriores de Minikube..."
+          Write-Host "Removing previous images from Minikube..."
           minikube image rm ecommerce/user-service:latest --ignore-not-found
           minikube image rm ecommerce/order-service:latest --ignore-not-found  
           minikube image rm ecommerce/product-service:latest --ignore-not-found
@@ -106,103 +105,105 @@ jobs:
           minikube image rm ecommerce/service-discovery:latest --ignore-not-found
           minikube image rm ecommerce/cloud-config:latest --ignore-not-found
           
-          Write-Host "✅ Limpieza completada!"
+          Write-Host "Cleanup completed!"
 
       - name: Create or recreate Minikube
         if: steps.check_minikube.outputs.minikube_exists == 'false' || github.event.inputs.force_recreate_minikube == 'true'
+        shell: powershell
         run: |
           if ("${{ github.event.inputs.force_recreate_minikube }}" -eq "true") {
-            Write-Host "🔄 Recreando Minikube según solicitud..."
+            Write-Host "Recreating Minikube as requested..."
             minikube delete --purge
           }
           
-          Write-Host "🚀 Creando nuevo cluster de Minikube..."
+          Write-Host "Creating new Minikube cluster..."
           minikube start --memory=12974 --cpus=4 --driver=docker
           
-          # Verificar que Minikube esté corriendo
           $status = minikube status
           if ($status -match "Running") {
-            Write-Host "✅ Minikube creado y corriendo correctamente"
+            Write-Host "Minikube created and running correctly"
           } else {
-            Write-Host "❌ Error al crear Minikube"
+            Write-Host "Error creating Minikube"
             exit 1
           }
 
       - name: Build fresh Docker images
+        shell: powershell
         run: |
-          Write-Host "🐳 Construyendo imágenes Docker frescas..."
+          Write-Host "Building fresh Docker images..."
           docker compose -f $env:COMPOSE_FILE build --no-cache
-          Write-Host "✅ Imágenes construidas!"
+          Write-Host "Images built successfully!"
 
       - name: Load new images into Minikube
+        shell: powershell
         run: |
-          Write-Host "📦 Cargando nuevas imágenes en Minikube..."
+          Write-Host "Loading new images into Minikube..."
           & $env:LOAD_SCRIPT
           
-          # Verificar que las imágenes se cargaron
-          Write-Host "🔍 Verificando imágenes cargadas:"
+          Write-Host "Verifying loaded images:"
           minikube image ls | findstr "ecommerce"
 
       - name: Deploy to Kubernetes
+        shell: powershell
         run: |
-          Write-Host "🚀 Desplegando servicios en Kubernetes..."
+          Write-Host "Deploying services to Kubernetes..."
           
-          # Crear el namespace
           kubectl create namespace $env:NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
           
-          # Desplegar los servicios
           if (Test-Path "k8s-optimized.yaml") {
             kubectl apply -f k8s-optimized.yaml
           } elseif (Test-Path "k8s/") {
             kubectl apply -f k8s/
           } else {
-            Write-Host "❌ No se encontraron manifiestos de Kubernetes"
+            Write-Host "Kubernetes manifests not found"
             exit 1
           }
 
       - name: Wait for pods to be ready
+        shell: powershell
         run: |
-          Write-Host "⏳ Esperando que todos los pods estén listos..."
+          Write-Host "Waiting for all pods to be ready..."
           kubectl wait --for=condition=ready pod --all -n $env:NAMESPACE --timeout=600s
           
-          Write-Host "📊 Estado final de los pods:"
+          Write-Host "Final pod status:"
           kubectl get pods -n $env:NAMESPACE
           
-          Write-Host "🌐 Servicios disponibles:"
+          Write-Host "Available services:"
           kubectl get svc -n $env:NAMESPACE
 
       - name: Run E2E Tests (placeholder)
+        shell: powershell
         run: |
-          Write-Host "🎯 Ejecutando pruebas E2E..."
-          Write-Host "📝 Placeholder para pruebas end-to-end"
-          Write-Host "🔧 Aquí se ejecutarían pruebas contra los servicios desplegados"
+          Write-Host "Running E2E tests..."
+          Write-Host "Placeholder for end-to-end tests"
+          Write-Host "Here we would run tests against deployed services"
           
-          # Obtener URL del API Gateway para pruebas
           try {
             $apiGatewayUrl = minikube service api-gateway-service -n $env:NAMESPACE --url
-            Write-Host "🌍 API Gateway disponible en: $apiGatewayUrl"
+            Write-Host "API Gateway available at: $apiGatewayUrl"
           } catch {
-            Write-Host "⚠️ No se pudo obtener la URL del API Gateway"
+            Write-Host "Could not get API Gateway URL"
           }
           
-          Write-Host "✅ Pruebas E2E completadas!"
+          Write-Host "E2E tests completed!"
 
       - name: Generate Stage Report
         if: always()
+        shell: powershell
         run: |
-          Write-Host "📊 Reporte del Stage Pipeline:"
+          Write-Host "Stage Pipeline Report:"
           Write-Host "=================================="
-          Write-Host "✅ Integration Tests: Ejecutados"
+          Write-Host "Integration Tests: Executed"
           $minikubeStatus = "${{ steps.check_minikube.outputs.minikube_exists }}"
           if ($minikubeStatus -eq "true") {
-            Write-Host "✅ Minikube: Limpiado y actualizado"
+            Write-Host "Minikube: Cleaned and updated"
           } else {
-            Write-Host "✅ Minikube: Creado desde cero"
+            Write-Host "Minikube: Created from scratch"
           }
-          Write-Host "✅ Docker Images: Construidas y cargadas"
-          Write-Host "✅ Kubernetes Deploy: Completado"
-          Write-Host "✅ Pods Status: ${{ job.status }}"
+          Write-Host "Docker Images: Built and loaded"
+          Write-Host "Kubernetes Deploy: Completed"
+          Write-Host "Pods Status: ${{ job.status }}"
           Write-Host ""
-          Write-Host "🎯 Stage environment listo para testing manual!"
-          Write-Host "🌍 Accede a los servicios usando:"
-          Write-Host "   minikube service api-gateway-service -n ecommerce-microservices"
+          Write-Host "Stage environment ready for manual testing!"
+          Write-Host "Access services using:"
+          Write-Host "minikube service api-gateway-service -n ecommerce-microservices"

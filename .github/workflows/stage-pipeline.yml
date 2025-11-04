@@ -193,7 +193,12 @@ jobs:
           Write-Host "📊 Reporte del Stage Pipeline:"
           Write-Host "=================================="
           Write-Host "✅ Integration Tests: Ejecutados"
-          Write-Host "✅ Minikube: ${{ steps.check_minikube.outputs.minikube_exists == 'true' && 'Limpiado y actualizado' || 'Creado desde cero' }}"
+          $minikubeStatus = "${{ steps.check_minikube.outputs.minikube_exists }}"
+          if ($minikubeStatus -eq "true") {
+            Write-Host "✅ Minikube: Limpiado y actualizado"
+          } else {
+            Write-Host "✅ Minikube: Creado desde cero"
+          }
           Write-Host "✅ Docker Images: Construidas y cargadas"
           Write-Host "✅ Kubernetes Deploy: Completado"
           Write-Host "✅ Pods Status: ${{ job.status }}"

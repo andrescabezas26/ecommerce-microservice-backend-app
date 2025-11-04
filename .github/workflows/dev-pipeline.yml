@@ -35,7 +35,7 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: Run Unit Tests Only
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "Running ONLY unit tests for all microservices..."
           Write-Host "Integration tests will run in Stage Pipeline"
@@ -74,7 +74,7 @@ jobs:
           Write-Host "Integration tests will run in Stage Pipeline after successful build"
 
       - name: Build Docker images
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "Building Docker images for all services..."
           docker compose -f $env:COMPOSE_FILE build

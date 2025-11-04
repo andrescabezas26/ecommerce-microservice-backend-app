@@ -35,51 +35,47 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: Run Unit Tests Only
+        shell: pwsh
         run: |
-          Write-Host "🧪 Running ONLY unit tests for all microservices..."
-          Write-Host "ℹ️  Integration tests will run in Stage Pipeline"
+          Write-Host "Running ONLY unit tests for all microservices..."
+          Write-Host "Integration tests will run in Stage Pipeline"
           
-          # Test user-service (exclude integration tests)
           Write-Host "Testing user-service (unit tests only)..."
           cd user-service
           mvn clean test -Dtest="!*IntegrationTest"
           cd ..
           
-          # Test order-service (exclude integration tests)
           Write-Host "Testing order-service (unit tests only)..."
           cd order-service
           mvn clean test -Dtest="!*IntegrationTest"
           cd ..
           
-          # Test product-service (exclude integration tests)
           Write-Host "Testing product-service (unit tests only)..."
           cd product-service
           mvn clean test -Dtest="!*IntegrationTest"
           cd ..
           
-          # Test payment-service (exclude integration tests)
           Write-Host "Testing payment-service (unit tests only)..."
           cd payment-service
           mvn clean test -Dtest="!*IntegrationTest"
           cd ..
           
-          # Test shipping-service (exclude integration tests)
           Write-Host "Testing shipping-service (unit tests only)..."
           cd shipping-service
           mvn clean test -Dtest="!*IntegrationTest"
           cd ..
           
-          # Test api-gateway
           Write-Host "Testing api-gateway..."
           cd api-gateway
           mvn clean test
           cd ..
           
-          Write-Host "✅ All unit tests completed successfully!"
-          Write-Host "🔄 Integration tests will run in Stage Pipeline after successful build"
+          Write-Host "All unit tests completed successfully!"
+          Write-Host "Integration tests will run in Stage Pipeline after successful build"
 
       - name: Build Docker images
+        shell: pwsh
         run: |
-          Write-Host "🐳 Building Docker images for all services..."
+          Write-Host "Building Docker images for all services..."
           docker compose -f $env:COMPOSE_FILE build
-          Write-Host "✅ All Docker images built successfully!"
+          Write-Host "All Docker images built successfully!"

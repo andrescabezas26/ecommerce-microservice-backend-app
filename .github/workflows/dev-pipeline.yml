@@ -82,4 +82,4 @@ jobs:
         run: |
           Write-Host "🐳 Building Docker images for all services..."
           docker compose -f $env:COMPOSE_FILE build
-          Write-Host "✅ All Docker images built successfully!"y
+          Write-Host "✅ All Docker images built successfully!"

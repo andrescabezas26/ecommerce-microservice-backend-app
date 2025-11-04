@@ -21,7 +21,8 @@ spec:
         command: ['sh', '-c', 'until nc -z service-discovery-service 8761; do echo waiting for service-discovery; sleep 10; done']
       containers:
       - name: cloud-config
-        image: selimhorri/cloud-config-ecommerce-boot:0.1.0
+        image: cloud-config:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9296
         env:

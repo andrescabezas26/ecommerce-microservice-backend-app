@@ -21,7 +21,8 @@ spec:
         command: ['sh', '-c', 'until nc -z service-discovery-service 8761 && nc -z cloud-config-service 9296; do echo waiting for services; sleep 10; done']
       containers:
       - name: api-gateway
-        image: selimhorri/api-gateway-ecommerce-boot:0.1.0
+        image: api-gateway:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:

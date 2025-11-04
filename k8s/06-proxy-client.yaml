@@ -21,7 +21,8 @@ spec:
         command: ['sh', '-c', 'until nc -z service-discovery-service 8761 && nc -z cloud-config-service 9296; do echo waiting for services; sleep 10; done']
       containers:
       - name: proxy-client
-        image: selimhorri/proxy-client-ecommerce-boot:0.1.0
+        image: proxy-client:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8900
         env:

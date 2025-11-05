@@ -96,6 +96,66 @@
  PS C:\actions-runner> .\run.cmd
  ```
 
+ ## Despliegue Rápido - Limpiar y Redeplegar Microservicios
+
+ ### 1. Eliminar el namespace anterior (limpiar todo):
+ ```powershell
+ kubectl delete namespace ecommerce-microservices
+ ```
+
+ ### 2. Compilar e construir todas las imágenes en Minikube:
+ ```powershell
+ .\build-images-minikube.ps1
+ ```
+
+ Este script:
+ - Configura Docker para usar el daemon de Minikube
+ - Compila cada servicio con Maven (`mvn clean package -DskipTests`)
+ - Construye las imágenes Docker en Minikube
+ - Etiqueta con `latest` para siempre usar la versión más reciente
+
+ ### 3. Desplegar todos los servicios en Kubernetes:
+ ```powershell
+ .\deploy-individual-services.bat
+ ```
+
+ Este script aplica los manifiestos YAML en el orden correcto de dependencias.
+
+ ### 4. Verificar que los pods están corriendo:
+ ```powershell
+ kubectl get pods -n ecommerce-microservices -o wide
+ ```
+
+ ### 5. Habilitar port-forward al API Gateway (en otra terminal PowerShell):
+ ```powershell
+ kubectl port-forward svc/api-gateway-service 8080:8080 -n ecommerce-microservices
+ ```
+
+ Luego puedes acceder en: `http://localhost:8080`
+
+ ### 6. Habilitar port-forward a Zipkin (en otra terminal PowerShell):
+ ```powershell
+ kubectl port-forward svc/zipkin-service 9411:9411 -n ecommerce-microservices
+ ```
+
+ Luego puedes acceder en: `http://localhost:9411`
+
+ ### 7. Actualizar un servicio específico (ej. user-service):
+ ```powershell
+ .\build-images-minikube.ps1 -Service user-service
+ ```
+
+ O manualmente:
+ ```powershell
+ & minikube docker-env --shell powershell | Invoke-Expression
+ cd user-service
+ mvn clean package -DskipTests -q
+ docker build -t 'user-service:latest' .
+ cd ..
+ kubectl rollout restart deployment/user-service -n ecommerce-microservices
+ kubectl rollout status deployment/user-service -n ecommerce-microservices --timeout=120s
+ ```
+
  ## Pipelines CI/CD
 
  ### 1. Development Pipeline (`dev-pipeline.yml`)

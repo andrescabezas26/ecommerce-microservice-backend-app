@@ -44,23 +44,7 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Run Integration Tests
-        shell: powershell
-        run: |
-          Write-Host "Running integration tests for microservices communication..."
-          
-          $services = @("user-service", "order-service", "product-service", "payment-service", "shipping-service")
-          
-          foreach ($service in $services) {
-            if (Test-Path "$service/src/test/java") {
-              Write-Host "Running integration tests for $service..."
-              cd $service
-              mvn test `-Dtest=*IntegrationTest `-Dspring.profiles.active=test `-Dmaven.test.failure.ignore=true
-              cd ..
-            }
-          }
-          
-          Write-Host "Integration tests completed!"
+      # Check Minikube runtime
 
       - name: Check if Minikube exists
         id: check_minikube
@@ -91,8 +75,33 @@ jobs:
             echo "minikube_exists=false" >> $env:GITHUB_OUTPUT
           }
 
-      - name: Clean existing Minikube namespace and images
-        if: steps.check_minikube.outputs.minikube_exists == 'true' && github.event.inputs.force_recreate_minikube != 'true'
+      # Detect if services are already deployed in the target namespace
+      - name: Check deployed services in namespace
+        id: check_deployment
+        shell: powershell
+        run: |
+          Write-Host "Checking if services are already deployed in namespace $env:NAMESPACE ..."
+          
+          $deployed = $false
+          $ns = kubectl get namespace $env:NAMESPACE --ignore-not-found=true 2>$null
+          if ($ns) {
+            $pods = kubectl get pods -n $env:NAMESPACE --no-headers 2>$null
+            $svcapigw = kubectl get svc api-gateway-service -n $env:NAMESPACE --ignore-not-found=true 2>$null
+            if ($pods -and $svcapigw) {
+              # Consider it deployed if we have any pods and the API Gateway service exists
+              $deployed = $true
+            }
+          }
+          if ($deployed) {
+            Write-Host "Namespace and services detected. Reusing existing deployment."
+            echo "services_deployed=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "No existing deployment found. Will build and deploy."
+            echo "services_deployed=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Clean existing Minikube namespace and images (forced)
+        if: github.event.inputs.force_recreate_minikube == 'true'
         shell: powershell
         run: |
           Write-Host "Cleaning namespace and existing resources..."
@@ -139,6 +148,7 @@ jobs:
           }
 
       - name: Build fresh Docker images
+        if: steps.check_deployment.outputs.services_deployed != 'true'
         shell: powershell
         run: |
           Write-Host "Building fresh Docker images..."
@@ -146,6 +156,7 @@ jobs:
           Write-Host "Images built successfully!"
 
       - name: Load new images into Minikube
+        if: steps.check_deployment.outputs.services_deployed != 'true'
         shell: powershell
         run: |
           Write-Host "Loading new images into Minikube..."
@@ -155,6 +166,7 @@ jobs:
           minikube image ls | findstr "ecommerce"
 
       - name: Deploy to Kubernetes
+        if: steps.check_deployment.outputs.services_deployed != 'true'
         shell: powershell
         run: |
           Write-Host "Deploying services to Kubernetes..."
@@ -185,21 +197,25 @@ jobs:
           Write-Host "Available services:"
           kubectl get svc -n $env:NAMESPACE
 
-      - name: Run E2E Tests (placeholder)
+      - name: Run Integration Tests (against deployed services)
         shell: powershell
         run: |
-          Write-Host "Running E2E tests..."
-          Write-Host "Placeholder for end-to-end tests"
-          Write-Host "Here we would run tests against deployed services"
+          Write-Host "Running integration tests for microservices communication..."
           
-          try {
-            $apiGatewayUrl = minikube service api-gateway-service -n $env:NAMESPACE --url
-            Write-Host "API Gateway available at: $apiGatewayUrl"
-          } catch {
-            Write-Host "Could not get API Gateway URL"
+          $services = @("user-service", "order-service", "product-service", "payment-service", "shipping-service")
+          
+          foreach ($service in $services) {
+            if (Test-Path "$service/src/test/java") {
+              Write-Host "Running integration tests for $service..."
+              cd $service
+              mvn test `-Dtest=*IntegrationTest `-Dspring.profiles.active=test `-Dmaven.test.failure.ignore=true
+              cd ..
+            }
           }
           
-          Write-Host "E2E tests completed!"
+          Write-Host "Integration tests completed!"
+
+      # E2E tests are executed in the separate e2e-tests job using npm run test:e2e:minikube
 
       - name: Generate Stage Report
         if: always()
@@ -238,12 +254,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: e2e-tests/package.json
 
-      - name: Install Newman and Dependencies
+      - name: Install E2E Dependencies
         working-directory: e2e-tests
         run: |
-          Write-Output "📦 Installing Newman and dependencies..."
-          npm install --legacy-peer-deps
-          npm install -g newman newman-reporter-htmlextra
+          Write-Output "📦 Installing E2E dependencies..."
+          npm ci --legacy-peer-deps
 
       - name: Wait for Services to be Ready
         working-directory: e2e-tests
@@ -251,11 +266,11 @@ jobs:
           Write-Output "⏳ Waiting for services to be ready for E2E testing..."
           node wait-for-services.js
 
-      - name: Run E2E Tests
+      - name: Run E2E Tests (minikube)
         working-directory: e2e-tests
         run: |
-          Write-Output "🧪 Running End-to-End tests..."
-          newman run ecommerce-e2e-collection.json -e local-environment.json --reporters cli,json,htmlextra --reporter-json-export results/newman-report.json --reporter-htmlextra-export results/newman-report.html --delay-request 1000 --timeout-request 10000
+          Write-Output "🧪 Running End-to-End tests on Minikube..."
+          npm run test:e2e:minikube
 
       - name: Generate E2E Test Summary
         if: always()

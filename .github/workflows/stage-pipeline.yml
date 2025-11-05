@@ -44,8 +44,6 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      # Check Minikube runtime
-
       - name: Check if Minikube exists
         id: check_minikube
         shell: powershell
@@ -75,7 +73,6 @@ jobs:
             echo "minikube_exists=false" >> $env:GITHUB_OUTPUT
           }
 
-      # Detect if services are already deployed in the target namespace
       - name: Check deployed services in namespace
         id: check_deployment
         shell: powershell
@@ -88,7 +85,6 @@ jobs:
             $pods = kubectl get pods -n $env:NAMESPACE --no-headers 2>$null
             $svcapigw = kubectl get svc api-gateway-service -n $env:NAMESPACE --ignore-not-found=true 2>$null
             if ($pods -and $svcapigw) {
-              # Consider it deployed if we have any pods and the API Gateway service exists
               $deployed = $true
             }
           }
@@ -164,15 +160,13 @@ jobs:
         run: |
           Write-Host "Deploying services to Kubernetes..."
           
-          # Create the namespace
           kubectl create namespace $env:NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
           
-          # Use the deploy script instead of manifests
           if (Test-Path $env:DEPLOY_SCRIPT) {
             Write-Host "Using deployment script: $env:DEPLOY_SCRIPT"
             & $env:DEPLOY_SCRIPT
           } else {
-            Write-Host "❌ Deploy script not found: $env:DEPLOY_SCRIPT"
+            Write-Host "Deploy script not found: $env:DEPLOY_SCRIPT"
             Write-Host "Available files in current directory:"
             Get-ChildItem -Name "*.bat"
             exit 1
@@ -207,8 +201,6 @@ jobs:
           }
           
           Write-Host "Integration tests completed!"
-
-      # E2E tests are executed in the separate e2e-tests job using npm run test:e2e:minikube
 
       - name: Generate Stage Report
         if: always()
@@ -250,19 +242,19 @@ jobs:
       - name: Install E2E Dependencies
         working-directory: e2e-tests
         run: |
-          Write-Output "📦 Installing E2E dependencies..."
+          Write-Output "Installing E2E dependencies..."
           npm ci --legacy-peer-deps
 
       - name: Wait for Services to be Ready
         working-directory: e2e-tests
         run: |
-          Write-Output "⏳ Waiting for services to be ready for E2E testing..."
+          Write-Output "Waiting for services to be ready for E2E testing..."
           node wait-for-services.js
 
       - name: Run E2E Tests (minikube)
         working-directory: e2e-tests
         run: |
-          Write-Output "🧪 Running End-to-End tests on Minikube..."
+          Write-Output "Running End-to-End tests on Minikube..."
           npm run test:e2e:minikube
 
       - name: Generate E2E Test Summary
@@ -270,27 +262,27 @@ jobs:
         working-directory: e2e-tests
         run: |
           if (Test-Path "results/newman-report.json") {
-            Write-Output "📊 E2E Test Results Summary:"
+            Write-Output "E2E Test Results Summary:"
             $report = Get-Content "results/newman-report.json" | ConvertFrom-Json
             $stats = $report.run.stats
             
-            Write-Output "  📋 Total Requests: $($stats.requests.total)"
-            Write-Output "  ✅ Passed: $($stats.requests.total - $stats.requests.failed)"
-            Write-Output "  ❌ Failed: $($stats.requests.failed)"
-            Write-Output "  ⏱️  Average Response Time: $([Math]::Round($stats.requests.average))ms"
-            Write-Output "  📈 Total Response Time: $($stats.requests.totalTime)ms"
+            Write-Output "  Total Requests: $($stats.requests.total)"
+            Write-Output "  Passed: $($stats.requests.total - $stats.requests.failed)"
+            Write-Output "  Failed: $($stats.requests.failed)"
+            Write-Output "  Average Response Time: $([Math]::Round($stats.requests.average))ms"
+            Write-Output "  Total Response Time: $($stats.requests.totalTime)ms"
             
             if ($stats.requests.failed -gt 0) {
-              Write-Output "💥 Some E2E tests failed!"
+              Write-Output "Some E2E tests failed!"
               $report.run.executions | Where-Object { $_.response.code -ge 400 } | ForEach-Object {
-                Write-Output "  ❌ Failed: $($_.item.name) - Status: $($_.response.code)"
+                Write-Output "  Failed: $($_.item.name) - Status: $($_.response.code)"
               }
               exit 1
             } else {
-              Write-Output "🎉 All E2E tests passed successfully!"
+              Write-Output "All E2E tests passed successfully!"
             }
           } else {
-            Write-Output "❌ E2E test report not found"
+            Write-Output "E2E test report not found"
             exit 1
           }
 

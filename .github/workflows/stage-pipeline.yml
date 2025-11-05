@@ -23,7 +23,7 @@ jobs:
 
     env:
       COMPOSE_FILE: ./compose.yml
-      LOAD_SCRIPT: ./load-images-minikube.bat
+      BUILD_SCRIPT: ./build-images-minikube.ps1
       DEPLOY_SCRIPT: ./deploy-individual-services.bat
       NAMESPACE: ecommerce-microservices
 
@@ -147,23 +147,16 @@ jobs:
             exit 1
           }
 
-      - name: Build fresh Docker images
+      - name: Build images directly in Minikube
         if: steps.check_deployment.outputs.services_deployed != 'true'
         shell: powershell
         run: |
-          Write-Host "Building fresh Docker images..."
-          docker compose -f $env:COMPOSE_FILE build --no-cache
-          Write-Host "Images built successfully!"
-
-      - name: Load new images into Minikube
-        if: steps.check_deployment.outputs.services_deployed != 'true'
-        shell: powershell
-        run: |
-          Write-Host "Loading new images into Minikube..."
-          & $env:LOAD_SCRIPT
+          Write-Host "Building Docker images directly inside Minikube..."
+          powershell -ExecutionPolicy Bypass -File $env:BUILD_SCRIPT
           
-          Write-Host "Verifying loaded images:"
-          minikube image ls | findstr "ecommerce"
+          Write-Host "Verifying images in Minikube Docker daemon:"
+          & minikube docker-env --shell powershell | Invoke-Expression
+          docker images | Select-String -Pattern "service|gateway|proxy|cloud|product|order|payment|shipping|favourite"
 
       - name: Deploy to Kubernetes
         if: steps.check_deployment.outputs.services_deployed != 'true'

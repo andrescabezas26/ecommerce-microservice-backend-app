@@ -245,12 +245,6 @@ jobs:
           Write-Output "Installing E2E dependencies..."
           npm ci --legacy-peer-deps
 
-      - name: Wait for Services to be Ready
-        working-directory: e2e-tests
-        run: |
-          Write-Output "Waiting for services to be ready for E2E testing..."
-          node wait-for-services.js
-
       - name: Run E2E Tests (minikube)
         working-directory: e2e-tests
         run: |

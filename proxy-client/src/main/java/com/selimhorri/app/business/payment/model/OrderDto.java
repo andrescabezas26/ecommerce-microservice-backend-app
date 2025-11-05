@@ -34,6 +34,7 @@ public class OrderDto implements Serializable {
 	@DateTimeFormat(pattern = AppConstant.LOCAL_DATE_TIME_FORMAT)
 	private LocalDateTime orderDate;
 	private String orderDesc;
+	private String orderStatus;
 	private Double orderFee;
 	
 }

@@ -39,15 +39,21 @@ public class JwtServiceImpl implements JwtService {
 	}
 	
 	@Override
-	public String generateToken(final UserDetails userDetails) {
+	public String generateToken(final UserDetails userDetails, final String userId) {
 		log.info("**String, jwt service generate token from given userDetails!*");
-		return this.jwtUtil.generateToken(userDetails);
+		return this.jwtUtil.generateToken(userDetails, userId);
 	}
 	
 	@Override
 	public Boolean validateToken(final String token, final UserDetails userDetails) {
 		log.info("**Boolean, jwt service validate token from given token and userDetails!*");
 		return this.jwtUtil.validateToken(token, userDetails);
+	}
+
+	@Override
+	public String extractUserId(String token) {
+		// TODO Auto-generated method stub
+		return this.jwtUtil.extractUserId(token);
 	}
 	
 	

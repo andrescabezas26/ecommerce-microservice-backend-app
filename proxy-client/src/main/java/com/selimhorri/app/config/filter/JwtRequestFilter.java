@@ -24,53 +24,129 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class JwtRequestFilter extends OncePerRequestFilter {
-	
+
 	private final UserDetailsService userDetailsService;
 	private final JwtService jwtService;
-	
+
 	@Override
-	protected void doFilterInternal(final HttpServletRequest request, final HttpServletResponse response, final FilterChain filterChain) 
-			throws ServletException, IOException {
-		
-		log.info("**JwtRequestFilter, once per request, validating and extracting token*\n");
-		
-		final var authorizationHeader = request.getHeader("Authorization");
-		
+	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+		String path = request.getRequestURI();
+		String method = request.getMethod();
+
+		log.debug("shouldNotFilter check for: {} {}", method, path);
+
+		// ✅ No filtrar OPTIONS (CORS preflight)
+		if ("OPTIONS".equalsIgnoreCase(method)) {
+			log.debug("Skipping filter for OPTIONS request");
+			return true;
+		}
+
+		// ✅ No filtrar autenticación (con prefijo /app desde API Gateway)
+		if (path.startsWith("/app/api/authenticate")) {
+			log.debug("Skipping filter for authenticate endpoint");
+			return true;
+		}
+
+		// ✅ No filtrar health checks
+		if (path.startsWith("/actuator/health") || path.startsWith("/actuator/info")) {
+			log.debug("Skipping filter for actuator endpoint");
+			return true;
+		}
+
+		// ✅ No filtrar registro de usuarios (POST /app/api/users desde API Gateway)
+		if (path.equals("/app/api/users") && "POST".equalsIgnoreCase(method)) {
+			log.debug("Skipping filter for user registration");
+			return true;
+		}
+
+		// ✅ No filtrar POST de credenciales (POST /app/api/credentials desde API
+		// Gateway)
+		if (path.equals("/app/api/credentials") && "POST".equalsIgnoreCase(method)) {
+			log.debug("Skipping filter for credentials registration");
+			return true;
+		}
+
+		// ✅ No filtrar GET de usuarios (GET /app/api/users desde API Gateway)
+		if (path.startsWith("/app/api/users") && "GET".equalsIgnoreCase(method)) {
+			log.debug("Skipping filter for user GET requests");
+			return true;
+		}
+
+		// ✅ No filtrar GET de productos y categorías (con prefijo /app desde API
+		// Gateway)
+		if ("GET".equalsIgnoreCase(method)) {
+			if (path.startsWith("/app/api/products") || path.startsWith("/app/api/categories")) {
+				log.debug("Skipping filter for public GET endpoint");
+				return true;
+			}
+		}
+
+		// ✅ No filtrar recursos estáticos
+		if (path.equals("/") || path.equals("/index") || path.equals("/index.html") ||
+				path.contains("/css/") || path.contains("/js/") || path.contains("/images/")) {
+			log.debug("Skipping filter for static resource");
+			return true;
+		}
+
+		// ✅ Filtrar todo lo demás
+		log.debug("Applying JWT filter to this request");
+		return false;
+	}
+
+	@Override
+	protected void doFilterInternal(final HttpServletRequest request, final HttpServletResponse response,
+			final FilterChain filterChain) throws ServletException, IOException {
+
+		log.debug("**JwtRequestFilter processing: {} {}", request.getMethod(), request.getRequestURI());
+
+		final String authorizationHeader = request.getHeader("Authorization");
+
 		String username = null;
 		String jwt = null;
-		
-		if ( authorizationHeader != null && authorizationHeader.startsWith("Bearer ") ) {
+
+		// Extraer token del header Authorization
+		if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
 			jwt = authorizationHeader.substring(7);
-			username = jwtService.extractUsername(jwt);
-		}
-		
-		if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-			
-			final UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
-			
-			if (this.jwtService.validateToken(jwt, userDetails)) {
-				final UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = 
-						new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-				usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-				SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+			try {
+				username = jwtService.extractUsername(jwt);
+			} catch (Exception e) {
+				log.error("Error extracting username from JWT: {}", e.getMessage());
 			}
-			
 		}
-		
+
+		// Si hay username y no hay autenticación en el contexto
+		if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+			try {
+				final UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+
+				// Validar token
+				if (this.jwtService.validateToken(jwt, userDetails)) {
+					final String userId = jwtService.extractUserId(jwt);
+
+					// Crear autenticación
+					final UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+							userDetails,
+							null,
+							userDetails.getAuthorities());
+
+					authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+					// Agregar userId al request
+					request.setAttribute("userId", userId);
+
+					// Establecer autenticación en el contexto
+					SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+					log.debug("User '{}' authenticated with userId: {}", username, userId);
+				} else {
+					log.warn("Invalid JWT token for user: {}", username);
+				}
+			} catch (Exception e) {
+				log.error("Error during JWT authentication: {}", e.getMessage());
+			}
+		}
+
 		filterChain.doFilter(request, response);
-		log.info("**Jwt request filtered!*\n");
+		log.debug("**Jwt request filtered!");
 	}
-	
-	
-	
 }
-
-
-
-
-
-
-
-
-
-

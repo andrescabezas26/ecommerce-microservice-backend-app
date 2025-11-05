@@ -22,16 +22,9 @@ public interface OrderItemClientService {
 	@GetMapping
 	ResponseEntity<OrderItemOrderItemServiceDtoCollectionResponse> findAll();
 	
-	@GetMapping("/{orderId}/{productId}")
+	@GetMapping("/{orderId}")
 	ResponseEntity<OrderItemDto> findById(
-			@PathVariable("orderId") final String orderId, 
-			@PathVariable("productId") final String productId);
-	
-	@GetMapping("/find")
-	ResponseEntity<OrderItemDto> findById(
-			@RequestBody 
-			@NotNull(message = "Input must not be NULL") 
-			@Valid final OrderItemId orderItemId);
+			@PathVariable("orderId") final String orderId);
 	
 	@PostMapping
 	ResponseEntity<OrderItemDto> save(
@@ -47,8 +40,7 @@ public interface OrderItemClientService {
 	
 	@DeleteMapping("/{orderId}/{productId}")
 	ResponseEntity<Boolean> deleteById(
-			@PathVariable("orderId") final String orderId, 
-			@PathVariable("productId") final String productId);
+			@PathVariable("orderId") final String orderId);
 	
 	@DeleteMapping("/delete")
 	ResponseEntity<Boolean> deleteById(

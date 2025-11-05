@@ -21,6 +21,7 @@ import com.selimhorri.app.domain.RoleBasedAuthority;
 import com.selimhorri.app.dto.UserDto;
 import com.selimhorri.app.dto.CredentialDto;
 import com.selimhorri.app.repository.UserRepository;
+import com.selimhorri.app.repository.CredentialRepository;
 import com.selimhorri.app.service.impl.UserServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,6 +29,9 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private CredentialRepository credentialRepository;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -129,6 +133,7 @@ class UserServiceTest {
                 .credential(this.credential)
                 .build();
 
+        when(this.userRepository.findById(1)).thenReturn(Optional.of(this.user));
         when(this.userRepository.save(any(User.class))).thenReturn(updatedUser);
 
         UserDto updatedInfo = UserDto.builder()
@@ -149,8 +154,15 @@ class UserServiceTest {
 
     @Test
     void deleteById_shouldDeleteUser() {
+        // given
+        when(this.userRepository.findById(1)).thenReturn(Optional.of(this.user));
+
         // when
         this.userService.deleteById(1);
 
+        // then - verify that save and deleteByCredentialId were called
+        org.mockito.Mockito.verify(this.userRepository).findById(1);
+        org.mockito.Mockito.verify(this.userRepository).save(any(User.class));
+        org.mockito.Mockito.verify(this.credentialRepository).deleteByCredentialId(1);
     }
 }

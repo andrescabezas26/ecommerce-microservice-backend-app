@@ -38,11 +38,6 @@ public class ProductController {
 		return ResponseEntity.ok(this.productClientService.save(productDto).getBody());
 	}
 	
-	@PutMapping
-	public ResponseEntity<ProductDto> update(@RequestBody final ProductDto productDto) {
-		return ResponseEntity.ok(this.productClientService.update(productDto).getBody());
-	}
-	
 	@PutMapping("/{productId}")
 	public ResponseEntity<ProductDto> update(@PathVariable("productId") final String productId, 
 			@RequestBody final ProductDto productDto) {

@@ -35,14 +35,6 @@ public class AuthenticationController {
 		return ResponseEntity.ok(this.authenticationService.authenticate(authenticationRequest));
 	}
 	
-	@GetMapping("/jwt/{jwt}")
-	public ResponseEntity<Boolean> authenticate(@PathVariable("jwt") final String jwt) {
-		log.info("**Authentication controller, proceed with the request*\n");
-		return ResponseEntity.ok(this.authenticationService.authenticate(jwt));
-	}
-	
-	
-	
 }
 
 

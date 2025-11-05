@@ -8,6 +8,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -34,11 +35,10 @@ public interface OrderClientService {
 			@NotNull(message = "Input must not be NULL!") 
 			@Valid final OrderDto orderDto);
 	
-	@PutMapping
-	public ResponseEntity<OrderDto> update(
-			@RequestBody 
-			@NotNull(message = "Input must not be NULL!") 
-			@Valid final OrderDto orderDto);
+	@PatchMapping("/{orderId}/status")
+	public ResponseEntity<OrderDto> updateStatus(
+			@PathVariable("orderId") @NotBlank(message = "Input must not be blank") @Valid final int orderId);
+
 	
 	@PutMapping("/{orderId}")
 	public ResponseEntity<OrderDto> update(

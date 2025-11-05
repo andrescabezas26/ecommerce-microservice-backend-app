@@ -33,22 +33,7 @@ public interface CartClientService {
 			@RequestBody 
 			@NotNull(message = "Input must not be NULL!") 
 			@Valid final CartDto cartDto);
-	
-	@PutMapping
-	public ResponseEntity<CartDto> update(
-			@RequestBody 
-			@NotNull(message = "Input must not be NULL!") 
-			@Valid final CartDto cartDto);
-	
-	@PutMapping("/{cartId}")
-	public ResponseEntity<CartDto> update(
-			@PathVariable("cartId")
-			@NotBlank(message = "Input must not be blank!")
-			@Valid final String cartId,
-			@RequestBody 
-			@NotNull(message = "Input must not be NULL!") 
-			@Valid final CartDto cartDto);
-	
+
 	@DeleteMapping("/{cartId}")
 	public ResponseEntity<Boolean> deleteById(@PathVariable("cartId") final String cartId);
 	

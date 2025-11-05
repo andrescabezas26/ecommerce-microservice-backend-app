@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import com.selimhorri.app.exception.payload.ExceptionMsg;
 import com.selimhorri.app.exception.wrapper.CredentialNotFoundException;
 import com.selimhorri.app.exception.wrapper.FavouriteNotFoundException;
+import com.selimhorri.app.exception.wrapper.UnauthorizedException;
 import com.selimhorri.app.exception.wrapper.UserObjectNotFoundException;
 import com.selimhorri.app.exception.wrapper.VerificationTokenNotFoundException;
 
@@ -27,75 +28,84 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class ApiExceptionHandler {
-	
+
 	@ExceptionHandler(value = {
-		FeignClientException.class,
-		FeignServerException.class,
-		FeignException.class
+			FeignClientException.class,
+			FeignServerException.class,
+			FeignException.class
 	})
 	public <T extends FeignException> ResponseEntity<ExceptionMsg> handleProxyException(final T e) {
-		
+
 		log.info("**ApiExceptionHandler controller, handle feign proxy exception*\n");
 		final var badRequest = HttpStatus.BAD_REQUEST;
-		
+
 		return new ResponseEntity<>(
 				ExceptionMsg.builder()
-					.msg(e.contentUTF8())
-					.httpStatus(badRequest)
-					.timestamp(ZonedDateTime
-							.now(ZoneId.systemDefault()))
-					.build(), badRequest);
+						.msg(e.contentUTF8())
+						.httpStatus(badRequest)
+						.timestamp(ZonedDateTime
+								.now(ZoneId.systemDefault()))
+						.build(),
+				badRequest);
 	}
-	
+
 	@ExceptionHandler(value = {
-		MethodArgumentNotValidException.class,
-		HttpMessageNotReadableException.class
+			MethodArgumentNotValidException.class,
+			HttpMessageNotReadableException.class
 	})
 	public <T extends BindException> ResponseEntity<ExceptionMsg> handleValidationException(final T e) {
-		
+
 		log.info("**ApiExceptionHandler controller, handle validation exception*\n");
 		final var badRequest = HttpStatus.BAD_REQUEST;
-		
+
 		return new ResponseEntity<>(
 				ExceptionMsg.builder()
-					.msg(e.getBindingResult().getFieldError().getDefaultMessage())
-					.httpStatus(badRequest)
-					.timestamp(ZonedDateTime
-							.now(ZoneId.systemDefault()))
-					.build(), badRequest);
+						.msg(e.getBindingResult().getFieldError().getDefaultMessage())
+						.httpStatus(badRequest)
+						.timestamp(ZonedDateTime
+								.now(ZoneId.systemDefault()))
+						.build(),
+				badRequest);
 	}
-	
+
 	@ExceptionHandler(value = {
-		UserObjectNotFoundException.class,
-		CredentialNotFoundException.class,
-		VerificationTokenNotFoundException.class,
-		FavouriteNotFoundException.class,
-		IllegalStateException.class,
+			UnauthorizedException.class
+	})
+	public <T extends RuntimeException> ResponseEntity<ExceptionMsg> handleUnauthorizedRequestException(final T e) {
+
+		log.info("**ApiExceptionHandler controller, handle API request*\n");
+		final var badRequest = HttpStatus.UNAUTHORIZED;
+
+		return new ResponseEntity<>(
+				ExceptionMsg.builder()
+						.msg(e.getMessage())
+						.httpStatus(badRequest)
+						.timestamp(ZonedDateTime
+								.now(ZoneId.systemDefault()))
+						.build(),
+				badRequest);
+	}
+
+	@ExceptionHandler(value = {
+			UserObjectNotFoundException.class,
+			CredentialNotFoundException.class,
+			VerificationTokenNotFoundException.class,
+			FavouriteNotFoundException.class,
+			IllegalStateException.class,
 	})
 	public <T extends RuntimeException> ResponseEntity<ExceptionMsg> handleApiRequestException(final T e) {
-		
+
 		log.info("**ApiExceptionHandler controller, handle API request*\n");
 		final var badRequest = HttpStatus.BAD_REQUEST;
-		
+
 		return new ResponseEntity<>(
 				ExceptionMsg.builder()
-					.msg(e.getMessage())
-					.httpStatus(badRequest)
-					.timestamp(ZonedDateTime
-							.now(ZoneId.systemDefault()))
-					.build(), badRequest);
+						.msg(e.getMessage())
+						.httpStatus(badRequest)
+						.timestamp(ZonedDateTime
+								.now(ZoneId.systemDefault()))
+						.build(),
+				badRequest);
 	}
-	
-	
-	
+
 }
-
-
-
-
-
-
-
-
-
-

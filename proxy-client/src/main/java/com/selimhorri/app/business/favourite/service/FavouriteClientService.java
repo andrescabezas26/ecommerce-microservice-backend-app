@@ -22,17 +22,10 @@ public interface FavouriteClientService {
 	@GetMapping
 	ResponseEntity<FavouriteFavouriteServiceCollectionDtoResponse> findAll();
 	
-	@GetMapping("/{userId}/{productId}/{likeDate}")
+	@GetMapping("/{userId}/{productId}")
 	public ResponseEntity<FavouriteDto> findById(
 			@PathVariable("userId") final String userId, 
-			@PathVariable("productId") final String productId, 
-			@PathVariable("likeDate") final String likeDate);
-	
-	@GetMapping("/find")
-	public ResponseEntity<FavouriteDto> findById(
-			@RequestBody 
-			@NotNull(message = "Input must not be NULL") 
-			@Valid final FavouriteId favouriteId);
+			@PathVariable("productId") final String productId);
 	
 	@PostMapping
 	public ResponseEntity<FavouriteDto> save(
@@ -46,11 +39,10 @@ public interface FavouriteClientService {
 			@NotNull(message = "Input must not be NULL") 
 			@Valid final FavouriteDto favouriteDto);
 	
-	@DeleteMapping("/{userId}/{productId}/{likeDate}")
+	@DeleteMapping("/{userId}/{productId}")
 	public ResponseEntity<Boolean> deleteById(
 			@PathVariable("userId") final String userId, 
-			@PathVariable("productId") final String productId, 
-			@PathVariable("likeDate") final String likeDate);
+			@PathVariable("productId") final String productId);
 	
 	@DeleteMapping("/delete")
 	public ResponseEntity<Boolean> deleteById(

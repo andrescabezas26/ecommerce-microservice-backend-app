@@ -38,11 +38,6 @@ public class CategoryController {
 		return ResponseEntity.ok(this.categoryClientService.save(categoryDto).getBody());
 	}
 	
-	@PutMapping
-	public ResponseEntity<CategoryDto> update(@RequestBody final CategoryDto categoryDto) {
-		return ResponseEntity.ok(this.categoryClientService.update(categoryDto).getBody());
-	}
-	
 	@PutMapping("/{categoryId}")
 	public ResponseEntity<CategoryDto> update(@PathVariable("categoryId") final String categoryId, 
 			@RequestBody final CategoryDto categoryDto) {
